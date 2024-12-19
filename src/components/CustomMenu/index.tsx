@@ -1,15 +1,9 @@
 import React from "react";
-import { CustomMenuWrapper } from "./style";
+import { CustomMenuWrapper, LiWrapper } from "./style";
 interface MenuItem {
   id: string;
   label: string;
   children?: MenuItem[];
-}
-
-interface MenuProps {
-  items: MenuItem[];
-  openItems: string[];
-  onToggle: (id: string) => void;
 }
 
 export const menuData: MenuItem[] = [
@@ -66,32 +60,49 @@ export const menuData: MenuItem[] = [
 interface MenuProps {
   items: MenuItem[];
   openItems: string[];
-  onToggle: (id: string) => void;
+  onToggle: (id: string, item: MenuItem) => void;
+  level?: number;
+  selectedKeys?: string[];
 }
 
-const Menu: React.FC<MenuProps> = ({ items, openItems, onToggle }) => {
+const Menu: React.FC<MenuProps> = ({
+  items,
+  openItems,
+  onToggle,
+  level = 0,
+  selectedKeys,
+}) => {
   return (
     <ul>
       {items.map((item) => {
         const isOpen = openItems.includes(item.id);
+        const isActive = selectedKeys?.includes(item.id);
         return (
           <div key={item.id}>
-            <li key={item.id}>
-              <span
-                onClick={() => onToggle(item.id)}
-                style={{ cursor: "pointer" }}
-              >
+            <LiWrapper
+              key={item.id}
+              onClick={() => {
+                onToggle(item.id, item);
+              }}
+              isActive={isActive!}
+              style={{
+                paddingLeft: `${level * 20}px`,
+              }}
+            >
+              <span style={{ cursor: "pointer" }}>
                 {item.label}{" "}
                 {item.children &&
                   item.children.length > 0 &&
                   (isOpen ? "[-]" : "[+]")}
               </span>
-            </li>
+            </LiWrapper>
             {isOpen && item.children && (
               <Menu
                 items={item.children}
                 openItems={openItems}
                 onToggle={onToggle}
+                level={level + 1}
+                selectedKeys={selectedKeys}
               />
             )}
           </div>
@@ -103,8 +114,10 @@ const Menu: React.FC<MenuProps> = ({ items, openItems, onToggle }) => {
 
 const CustomMenu: React.FC = () => {
   const [openItems, setOpenItems] = React.useState<string[]>(["1"]); // 初始展开项
+  const [activeItem, setActiveItem] = React.useState<string>("1"); // 当前激活项
 
-  const toggleItem = (id: string) => {
+  const toggleItem = (id: string, item) => {
+    setActiveItem(id);
     setOpenItems((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
@@ -114,7 +127,13 @@ const CustomMenu: React.FC = () => {
     <div>
       <h1>菜单</h1>
       <CustomMenuWrapper>
-        <Menu items={menuData} openItems={openItems} onToggle={toggleItem} />
+        <Menu
+          selectedKeys={[activeItem]}
+          items={menuData}
+          openItems={openItems}
+          onToggle={toggleItem}
+          // renderMenuItem
+        />
       </CustomMenuWrapper>
     </div>
   );
