@@ -1,5 +1,8 @@
-import React from "react";
-import { CustomMenuWrapper, LiWrapper } from "./style";
+import React, { useState } from "react";
+import { CustomMenuWrapper, LiWrapper, CollapsedWrapper } from "./style";
+import { SearchOutlined } from "@ant-design/icons";
+import { Button } from "antd";
+import CSSMotion, { CSSMotionProps } from "rc-motion";
 interface MenuItem {
   id: string;
   label: string;
@@ -64,21 +67,39 @@ interface MenuProps {
   level?: number;
   selectedKeys?: string[];
 }
-
+const collapseNode = () => {
+  return { height: 0 };
+};
+const expandNode = (node) => {
+  return { height: node.scrollHeight };
+};
+export const inlineMotion: CSSMotionProps = {
+  motionName: "rc-menu-collapse",
+  motionAppear: true,
+  onAppearStart: collapseNode,
+  onAppearActive: expandNode,
+  onEnterStart: collapseNode,
+  onEnterActive: expandNode,
+  onLeaveStart: expandNode,
+  onLeaveActive: collapseNode,
+};
 const Menu: React.FC<MenuProps> = ({
   items,
   openItems,
   onToggle,
   level = 0,
   selectedKeys,
+  collapsed,
+  className,
+  style,
 }) => {
   return (
-    <ul>
-      {items.map((item) => {
+    <CollapsedWrapper collapsed={collapsed}>
+      {items?.map((item) => {
         const isOpen = openItems.includes(item.id);
         const isActive = selectedKeys?.includes(item.id);
         return (
-          <div key={item.id}>
+          <div key={item.id} className={className} style={style}>
             <LiWrapper
               key={item.id}
               onClick={() => {
@@ -90,29 +111,42 @@ const Menu: React.FC<MenuProps> = ({
               }}
             >
               <span style={{ cursor: "pointer" }}>
+                <SearchOutlined />
                 {item.label}{" "}
                 {item.children &&
                   item.children.length > 0 &&
                   (isOpen ? "[-]" : "[+]")}
               </span>
             </LiWrapper>
-            {isOpen && item.children && (
-              <Menu
-                items={item.children}
-                openItems={openItems}
-                onToggle={onToggle}
-                level={level + 1}
-                selectedKeys={selectedKeys}
-              />
-            )}
+            <CSSMotion
+              visible={isOpen && item.children}
+              {...inlineMotion}
+              motionName="my-motion"
+            >
+              {({ className, style }) => {
+                return (
+                  <Menu
+                    className={className}
+                    style={style}
+                    items={item.children}
+                    openItems={openItems}
+                    onToggle={onToggle}
+                    level={level + 1}
+                    selectedKeys={selectedKeys}
+                  />
+                );
+              }}
+            </CSSMotion>
           </div>
         );
       })}
-    </ul>
+    </CollapsedWrapper>
   );
 };
 
-const CustomMenu: React.FC = () => {
+const CustomMenu: React.FC = (props) => {
+  const { collapsed } = props;
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(collapsed);
   const [openItems, setOpenItems] = React.useState<string[]>(["1"]); // 初始展开项
   const [activeItem, setActiveItem] = React.useState<string>("1"); // 当前激活项
 
@@ -126,8 +160,12 @@ const CustomMenu: React.FC = () => {
   return (
     <div>
       <h1>菜单</h1>
-      <CustomMenuWrapper>
+      <Button onClick={() => setIsCollapsed(!isCollapsed)}>
+        {isCollapsed ? "展开" : "收起"}
+      </Button>
+      <CustomMenuWrapper collapsed={collapsed}>
         <Menu
+          collapsed={isCollapsed}
           selectedKeys={[activeItem]}
           items={menuData}
           openItems={openItems}
